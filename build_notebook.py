@@ -324,73 +324,40 @@ We create a scoring system where companies accumulate points based on predefined
 - **Medium:** 2-3 points
 - **High:** 4+ points
 """))
-cells.append(nbf.v4.new_code_cell("""def assign_anomaly_score(row):
-    score = 0
-    flags = []
+cells.append(nbf.v4.new_code_cell("""# Vectorized anomaly scoring for performance
+conditions = [
+    (df['receivables_growth'] - df['rev_growth'] > 0.20, 1, "Rec > Rev Growth"),
+    (df['inventory_growth'] - df['rev_growth'] > 0.20, 1, "Inv > Rev Growth"),
+    ((df['net_income'] > 0) & (df['operating_cash_flow'] < 0), 2, "Positive NI, Negative OCF"),
+    (df['ocf_to_net_income'] < 0.5, 1, "Weak OCF/NI"),
+    (df['gross_margin_change'] < -0.10, 1, "Sharp GM Drop"),
+    ((df['rev_growth'] > 0.15) & (df['ocf_growth'] < -0.10), 2, "Rev Growth vs OCF Drop"),
+    (df['debt_growth'] > 0.50, 1, "Debt Spike"),
+    (df['current_ratio'] < 1.0, 1, "Current Ratio < 1"),
+    (df['accruals_ratio'] > 0.10, 1, "High Accruals"),
+    (df['beneish_flag'], 2, "Beneish M-Score > -2.22")
+]
 
-    # Receivables growth much faster than revenue
-    if row['receivables_growth'] - row['rev_growth'] > 0.20:
-        score += 1
-        flags.append("Rec > Rev Growth")
+# Initialize score and flags
+score = np.zeros(len(df), dtype=int)
+flags = np.full(len(df), '', dtype=object)
 
-    # Inventory growth much faster than revenue
-    if row['inventory_growth'] - row['rev_growth'] > 0.20:
-        score += 1
-        flags.append("Inv > Rev Growth")
+# Apply conditions iteratively via vectorized numpy operations
+for cond, points, msg in conditions:
+    score += np.where(cond, points, 0)
+    # Add comma if not empty
+    prefix = np.where(flags == '', '', ', ')
+    flags = np.where(cond, flags + prefix + msg, flags)
 
-    # Net income positive but operating cash flow negative
-    if row['net_income'] > 0 and row['operating_cash_flow'] < 0:
-        score += 2
-        flags.append("Positive NI, Negative OCF")
+df['anomaly_score'] = score
+df['key_red_flags'] = flags
 
-    # Weak cash conversion
-    if row['ocf_to_net_income'] < 0.5:
-        score += 1
-        flags.append("Weak OCF/NI")
-
-    # Sharp gross margin fall
-    if row['gross_margin_change'] < -0.10:
-        score += 1
-        flags.append("Sharp GM Drop")
-
-    # Revenue high growth while OCF falls
-    if row['rev_growth'] > 0.15 and row['ocf_growth'] < -0.10:
-        score += 2
-        flags.append("Rev Growth vs OCF Drop")
-
-    # Debt spikes
-    if row['debt_growth'] > 0.50:
-        score += 1
-        flags.append("Debt Spike")
-
-    # Liquidity risk
-    if row['current_ratio'] < 1.0:
-        score += 1
-        flags.append("Current Ratio < 1")
-
-    # High Accruals
-    if row['accruals_ratio'] > 0.10:
-        score += 1
-        flags.append("High Accruals")
-
-    # Beneish Flag
-    if row['beneish_flag']:
-        score += 2
-        flags.append("Beneish M-Score > -2.22")
-
-    return score, ", ".join(flags)
-
-df['anomaly_score'], df['key_red_flags'] = zip(*df.apply(assign_anomaly_score, axis=1))
-
-def assign_risk_level(score):
-    if score >= 4:
-        return 'High'
-    elif score >= 2:
-        return 'Medium'
-    else:
-        return 'Low'
-
-df['anomaly_risk_level'] = df['anomaly_score'].apply(assign_risk_level)
+# Vectorized risk level assignment
+df['anomaly_risk_level'] = np.select(
+    [df['anomaly_score'] >= 4, df['anomaly_score'] >= 2],
+    ['High', 'Medium'],
+    default='Low'
+)
 """))
 
 # Section 8: Peer comparison

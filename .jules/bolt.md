@@ -1,0 +1,3 @@
+## 2024-05-18 - Replacing Pandas df.apply with Vectorized numpy Operations
+**Learning:** Using `df.apply()` row-by-row on a pandas DataFrame is extremely slow because it introduces Python overhead for every single row. Replacing it with vectorized operations (`np.where` or `np.select` over arrays/series) can lead to >10x performance improvements.
+**Action:** When creating calculated columns or scores based on multiple conditions across rows, never use `df.apply(axis=1)` if standard vectorized `numpy`/`pandas` methods can achieve the same result. Define conditions as boolean masks and apply values globally.
