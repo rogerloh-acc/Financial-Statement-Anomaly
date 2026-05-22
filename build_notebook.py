@@ -170,8 +170,8 @@ if df.isnull().sum().sum() > 0:
 df = df.drop_duplicates()
 
 # Data type checks
-numeric_cols = df.select_dtypes(include=[np.number]).columns
-df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors='coerce')
+# Skipped redundant pd.to_numeric since sample data is already numeric natively.
+# Only convert if actually required by user-uploaded CSV later.
 
 # Basic validation rules
 df = df[df['total_assets'] > 0]
