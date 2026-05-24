@@ -9,3 +9,7 @@
 ## 2024-05-23 - Vectorizing pandas DataFrame assignments to bypass column alignment
 **Learning:** When performing operations on multiple columns (like `grouped[cols].shift(1)` or `grouped[cols].pct_change()`) and assigning the result to a new list of columns with different names (`df[new_cols] = ...`), pandas attempts to align by column names, resulting in a `ValueError` or `NaN`s.
 **Action:** Append `.values` to the output of the operation (e.g., `df[new_cols] = grouped[cols].shift(1).values`) to bypass column alignment. This allows replacing multiple slow, individual Series operations with a single, fast DataFrame operation, reducing groupby overhead significantly (~1.4x - 1.8x faster).
+
+## 2024-05-24 - Avoiding groupby agg + merge by using transform
+**Learning:** Computing group-level metrics using `df.groupby(...).agg(...)` (e.g. median) and then broadcasting those metrics back to the original DataFrame using `pd.merge()` is slow. It creates intermediate dataframes and requires expensive index alignments. Using `df.groupby(...).transform(...)` is significantly faster because it calculates and broadcasts the metric directly to the original shape in one pass.
+**Action:** When you need group-level aggregates aligned to the original rows, replace `groupby` + `merge` patterns with `transform` to save memory and improve performance (~1.5x faster on large datasets).
