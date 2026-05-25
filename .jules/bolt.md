@@ -13,3 +13,7 @@
 ## 2024-05-24 - Avoiding groupby agg + merge by using transform
 **Learning:** Computing group-level metrics using `df.groupby(...).agg(...)` (e.g. median) and then broadcasting those metrics back to the original DataFrame using `pd.merge()` is slow. It creates intermediate dataframes and requires expensive index alignments. Using `df.groupby(...).transform(...)` is significantly faster because it calculates and broadcasts the metric directly to the original shape in one pass.
 **Action:** When you need group-level aggregates aligned to the original rows, replace `groupby` + `merge` patterns with `transform` to save memory and improve performance (~1.5x faster on large datasets).
+
+## 2024-05-30 - Performance Optimization of numpy where string concatenation
+**Learning:** In numpy/pandas, doing `np.where(cond, flags + prefix + msg, flags)` where `flags` is an `object` array of strings is surprisingly slow, because it calculates the concatenated strings `flags + prefix + msg` for *all* rows in the array regardless of whether `cond` is true or false. When dealing with string object arrays, this results in significant overhead from unnecessary string allocations and concatenations.
+**Action:** Use boolean indexing (`mask = cond; flags[mask] += msg`) to only perform string concatenation on the subset of rows where the condition is actually true. This avoids dense string operations and provides a massive speedup (~3x faster).
