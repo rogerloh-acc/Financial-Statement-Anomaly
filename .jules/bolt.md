@@ -17,3 +17,7 @@
 ## 2024-05-30 - Performance Optimization of numpy where string concatenation
 **Learning:** In numpy/pandas, doing `np.where(cond, flags + prefix + msg, flags)` where `flags` is an `object` array of strings is surprisingly slow, because it calculates the concatenated strings `flags + prefix + msg` for *all* rows in the array regardless of whether `cond` is true or false. When dealing with string object arrays, this results in significant overhead from unnecessary string allocations and concatenations.
 **Action:** Use boolean indexing (`mask = cond; flags[mask] += msg`) to only perform string concatenation on the subset of rows where the condition is actually true. This avoids dense string operations and provides a massive speedup (~3x faster).
+
+## 2024-05-31 - Safe division array operations
+**Learning:** Using `np.where(d == 0, 0, n / d)` does not skip calculating `n / d` for zero values. It calculates the entire division array (producing internal warnings and taking extra time), and *then* does the selection. `np.divide(n, d, out=np.zeros_like(n, dtype=float), where=d!=0)` calculates division *only* where the condition holds, bypassing unneeded work and reducing division execution time by >50%.
+**Action:** Always use `np.divide` with a `where` clause instead of `np.where` when doing safe division across arrays/series, especially in financial ratio pipelines where division by zero is common.
