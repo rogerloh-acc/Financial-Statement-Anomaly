@@ -21,3 +21,7 @@
 ## 2024-05-31 - Safe division array operations
 **Learning:** Using `np.where(d == 0, 0, n / d)` does not skip calculating `n / d` for zero values. It calculates the entire division array (producing internal warnings and taking extra time), and *then* does the selection. `np.divide(n, d, out=np.zeros_like(n, dtype=float), where=d!=0)` calculates division *only* where the condition holds, bypassing unneeded work and reducing division execution time by >50%.
 **Action:** Always use `np.divide` with a `where` clause instead of `np.where` when doing safe division across arrays/series, especially in financial ratio pipelines where division by zero is common.
+
+## 2024-06-03 - Replacing Series Operations with Numpy Arrays for mathematical operations
+**Learning:** Performing multiple arithmetic operations on pandas Series variables introduces substantial overhead due to index alignment on every step. For variables drawn from the same DataFrame (which are guaranteed to align), this is entirely unnecessary. Appending `.values` to these Series and working with raw numpy arrays can be ~4x faster.
+**Action:** When calculating derived fields using math or building multiple boolean masks from multiple columns of the same DataFrame, append `.values` to bypass pandas overhead.
