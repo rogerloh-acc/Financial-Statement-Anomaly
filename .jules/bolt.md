@@ -25,3 +25,6 @@
 ## 2024-06-03 - Replacing Series Operations with Numpy Arrays for mathematical operations
 **Learning:** Performing multiple arithmetic operations on pandas Series variables introduces substantial overhead due to index alignment on every step. For variables drawn from the same DataFrame (which are guaranteed to align), this is entirely unnecessary. Appending `.values` to these Series and working with raw numpy arrays can be ~4x faster.
 **Action:** When calculating derived fields using math or building multiple boolean masks from multiple columns of the same DataFrame, append `.values` to bypass pandas overhead.
+## 2024-05-28 - Bypassing Pandas Index Alignment Overhead
+**Learning:** Pandas incurs significant overhead checking and aligning indices when performing arithmetic operations between two `Series` objects or passing `Series` objects to NumPy functions (like `np.divide`). If the `Series` objects are guaranteed to share the exact same index (e.g. columns from the exact same DataFrame), this check is redundant and very slow.
+**Action:** Extract raw NumPy arrays by appending `.values` to Pandas Series before performing vectorized mathematical operations or passing them into numpy functions, especially when dealing with heavy or repeated row-level math in large dataframes.
