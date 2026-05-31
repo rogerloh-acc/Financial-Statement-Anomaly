@@ -289,7 +289,10 @@ cells.append(nbf.v4.new_code_cell("""def calculate_beneish(df):
     df_b[prev_cols] = shifted
 
     # Fill NAs to avoid errors, though Beneish is best viewed from year 2 onwards
-    df_b = df_b.fillna(1)
+    # ⚡ Bolt Optimization: Replace df_b = df_b.fillna(1) with df_b[prev_cols] = df_b[prev_cols].fillna(1)
+    # Filling NaNs across the entire DataFrame is very slow because it checks and copies many unrelated columns.
+    # Since we only introduced NaNs into prev_cols in the step above, we only fill those specific columns.
+    df_b[prev_cols] = df_b[prev_cols].fillna(1)
 
     # DSRI
     rec_to_rev_t = safe_div(df_b['accounts_receivable'], df_b['revenue'])
