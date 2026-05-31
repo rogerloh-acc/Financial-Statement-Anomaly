@@ -36,3 +36,7 @@
 ## 2024-06-07 - Optimizing dataframe missing value replacements with np.nan_to_num
 **Learning:** Chaining pandas methods like `df.replace([np.inf, -np.inf], np.nan).fillna(0)` creates multiple intermediate copies of the DataFrame and is slow for large datasets. This is especially true before feeding data into scikit-learn models which typically expect arrays anyway.
 **Action:** When you need to replace infs and NaNs with zeros in a dataframe (especially before machine learning), extract the values using `df.to_numpy(copy=True)` and use `np.nan_to_num(arr, copy=False, nan=0.0, posinf=0.0, neginf=0.0)`. This performs all the replacements in a single, fast C-level pass and provides a ~2x performance speedup.
+
+## 2024-06-10 - Optimizing Pandas DataFrame fillna() allocations
+**Learning:** Calling `df = df.fillna(value)` on a large pandas DataFrame evaluates and creates a new copy of the entire DataFrame, even checking columns that don't need any missing value replacement. If you just created `NaN`s in a very specific subset of columns (like after a `.shift()` or `.roll()` assignment), doing a full DataFrame `fillna()` creates massive unnecessary overhead.
+**Action:** When filling missing values that are known to only exist in specific columns, always target the `.fillna()` explicitly: `df[subset_cols] = df[subset_cols].fillna(value)`. This avoids iterating over and copying the unaffected columns.
