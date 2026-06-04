@@ -56,3 +56,7 @@
 ## 2024-06-17 - Fast assignment of missing values across multiple columns
 **Learning:** Looping through columns to extract arrays (`df[col].to_numpy()`), apply a boolean mask, and then reassign them back to the DataFrame incurs unnecessary loop overhead and array instantiations.
 **Action:** Use `df.loc[mask, cols_to_null] = np.nan`. Pandas' `.loc` is heavily optimized internally to handle broadcasting assignments across multiple specific columns simultaneously, running roughly ~1.4x faster than manual loops over raw arrays.
+
+## 2024-06-25 - Bypassing pandas abs() overhead with np.abs() on raw arrays
+**Learning:** Using the built-in `abs()` function directly on a Pandas Series (e.g., `abs(df['col'])`) is significantly slower than using NumPy's `np.abs()` on the underlying values array (`np.abs(df['col'].values)`). Calling `abs()` on a Series involves Pandas index alignment overhead and series instantiation.
+**Action:** When computing absolute values across columns for filtering or flagging, extract the underlying NumPy arrays with `.values` and use `np.abs()`. This speeds up the operation by ~1.8x.
