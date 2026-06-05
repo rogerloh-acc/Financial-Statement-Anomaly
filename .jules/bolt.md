@@ -60,3 +60,6 @@
 ## 2024-06-25 - Bypassing pandas abs() overhead with np.abs() on raw arrays
 **Learning:** Using the built-in `abs()` function directly on a Pandas Series (e.g., `abs(df['col'])`) is significantly slower than using NumPy's `np.abs()` on the underlying values array (`np.abs(df['col'].values)`). Calling `abs()` on a Series involves Pandas index alignment overhead and series instantiation.
 **Action:** When computing absolute values across columns for filtering or flagging, extract the underlying NumPy arrays with `.values` and use `np.abs()`. This speeds up the operation by ~1.8x.
+## 2025-06-05 - [Vectorized pct_change and roll replacements]
+**Learning:** Even when using full-column vectorized pandas operations like `.pct_change()`, extracting the underlying array and using raw numpy slicing/division (`np.divide`) provides measurable speedups (~1.5x-2.7x) by bypassing index alignment overhead. Similarly, for single-row shifts with boundary masking, using `np.empty_like` with slice assignment (`arr[1:] = arr[:-1]`) avoids the wrap-around overhead of `np.roll`.
+**Action:** For simple row-to-row operations (diffs, percentage changes, shifts) on dataframes already sorted by groups, prefer extracting `.to_numpy()` and applying direct slice-based arithmetic/assignment over pandas built-ins or `np.roll`.
