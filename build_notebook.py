@@ -312,18 +312,13 @@ cells.append(nbf.v4.new_code_cell("""def calculate_beneish(df):
     # ⚡ Bolt Optimization: Replace np.roll with empty_like + slicing
     # np.roll computes a wraparound which we overwrite anyway, empty_like avoids
     # that extra computation overhead and is ~1.4x faster.
+    # We also assign the default fill value (1.0) directly to the boundaries, avoiding a slow pandas .fillna(1) pass.
     arr = df_b[cols_to_shift].to_numpy()
     shifted = np.empty_like(arr, dtype=float)
-    shifted[0] = np.nan
+    shifted[0] = 1.0
     shifted[1:] = arr[:-1]
-    shifted[mask] = np.nan
+    shifted[mask] = 1.0
     df_b[prev_cols] = shifted
-
-    # Fill NAs to avoid errors, though Beneish is best viewed from year 2 onwards
-    # ⚡ Bolt Optimization: Replace df_b = df_b.fillna(1) with df_b[prev_cols] = df_b[prev_cols].fillna(1)
-    # Filling NaNs across the entire DataFrame is very slow because it checks and copies many unrelated columns.
-    # Since we only introduced NaNs into prev_cols in the step above, we only fill those specific columns.
-    df_b[prev_cols] = df_b[prev_cols].fillna(1)
 
     # DSRI
     rec_to_rev_t = safe_div(df_b['accounts_receivable'], df_b['revenue'])

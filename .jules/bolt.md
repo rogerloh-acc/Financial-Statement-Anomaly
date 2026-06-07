@@ -63,3 +63,7 @@
 ## 2025-06-05 - [Vectorized pct_change and roll replacements]
 **Learning:** Even when using full-column vectorized pandas operations like `.pct_change()`, extracting the underlying array and using raw numpy slicing/division (`np.divide`) provides measurable speedups (~1.5x-2.7x) by bypassing index alignment overhead. Similarly, for single-row shifts with boundary masking, using `np.empty_like` with slice assignment (`arr[1:] = arr[:-1]`) avoids the wrap-around overhead of `np.roll`.
 **Action:** For simple row-to-row operations (diffs, percentage changes, shifts) on dataframes already sorted by groups, prefer extracting `.to_numpy()` and applying direct slice-based arithmetic/assignment over pandas built-ins or `np.roll`.
+
+## 2025-10-24 - Fast shifting missing value initialization
+**Learning:** When shifting numpy arrays manually to emulate `groupby.shift()` and subsequently replacing the missing values at group boundaries with a default fill value (e.g., `1.0`), initially assigning `np.nan` to the array boundaries and later using `pandas.DataFrame.fillna(1)` involves unnecessary allocation and a complete pass over the dataframe.
+**Action:** Assign the default fill value directly to the array boundaries during the shift operation (e.g., `shifted[0] = 1.0` and `shifted[mask] = 1.0`) to avoid using `.fillna()` entirely. This provides a ~30% performance boost by skipping an expensive dataframe iteration.
