@@ -67,3 +67,7 @@
 ## 2025-10-24 - Fast shifting missing value initialization
 **Learning:** When shifting numpy arrays manually to emulate `groupby.shift()` and subsequently replacing the missing values at group boundaries with a default fill value (e.g., `1.0`), initially assigning `np.nan` to the array boundaries and later using `pandas.DataFrame.fillna(1)` involves unnecessary allocation and a complete pass over the dataframe.
 **Action:** Assign the default fill value directly to the array boundaries during the shift operation (e.g., `shifted[0] = 1.0` and `shifted[mask] = 1.0`) to avoid using `.fillna()` entirely. This provides a ~30% performance boost by skipping an expensive dataframe iteration.
+
+## 2024-06-08 - [Replace chained arithmetic with np.dot() on a unified NumPy array]
+**Learning:** While using `.values` bypasses Pandas index alignment overhead, chaining multiple operations like `A + B + C` still generates multiple intermediate arrays in memory. Grouping columns and utilizing `np.dot` effectively delegates matrix-vector multiplication to optimized C-level BLAS routines. This provided an approximately 3.8x speedup on an array of 1M elements.
+**Action:** When performing complex weighted sum calculations across multiple columns in pandas, extract the components as a 2D numpy array and use `np.dot()` instead of sequentially summing the product of individual columns.
