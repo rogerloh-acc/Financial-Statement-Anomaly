@@ -71,3 +71,7 @@
 ## 2024-06-08 - [Replace chained arithmetic with np.dot() on a unified NumPy array]
 **Learning:** While using `.values` bypasses Pandas index alignment overhead, chaining multiple operations like `A + B + C` still generates multiple intermediate arrays in memory. Grouping columns and utilizing `np.dot` effectively delegates matrix-vector multiplication to optimized C-level BLAS routines. This provided an approximately 3.8x speedup on an array of 1M elements.
 **Action:** When performing complex weighted sum calculations across multiple columns in pandas, extract the components as a 2D numpy array and use `np.dot()` instead of sequentially summing the product of individual columns.
+
+## 2024-05-24 - [Avoid np.select for Object Arrays]
+**Learning:** `np.select` is slow when categorizing data into object arrays (like strings) because of its internal overhead.
+**Action:** When categorizing data with multiple conditions, use an array of categories and index it with an integer mask. For example, `levels = np.array(['Low', 'Medium', 'High']); idx = (score_arr >= 2).astype(int) + (score_arr >= 4).astype(int); result = levels[idx]`. This provides massive speedups over `np.select`.
