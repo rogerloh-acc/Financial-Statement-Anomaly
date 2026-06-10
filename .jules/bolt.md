@@ -75,3 +75,7 @@
 ## 2024-05-24 - [Avoid np.select for Object Arrays]
 **Learning:** `np.select` is slow when categorizing data into object arrays (like strings) because of its internal overhead.
 **Action:** When categorizing data with multiple conditions, use an array of categories and index it with an integer mask. For example, `levels = np.array(['Low', 'Medium', 'High']); idx = (score_arr >= 2).astype(int) + (score_arr >= 4).astype(int); result = levels[idx]`. This provides massive speedups over `np.select`.
+
+## 2024-07-20 - Fast boolean masking instead of temporary DataFrame columns
+**Learning:** Assigning a temporary boolean flag as a new column in a Pandas DataFrame (e.g., `df['flag'] = df['A'] > df['B']`), using it for conditionals, and then dropping it (`df = df.drop(columns=['flag'])`) introduces huge overhead due to Series allocation, index alignment, and DataFrame reconstruction.
+**Action:** Extract the values directly as a numpy array mask (`mask = df['A'].values > df['B'].values`). This boolean array can be used seamlessly with `.any()` and for subset assignment using `df.loc[mask, ...]`, bypassing pandas column manipulation overhead entirely and resulting in a ~10x speedup.
