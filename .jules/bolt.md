@@ -103,3 +103,7 @@
 ## 2023-10-27 - [Pandas Conditional Assignment Cap]
 **Learning:** When assigning a value from a second column to a first column using a conditional mask (e.g., capping current assets by total assets when it exceeds it), using a boolean mask and `df.loc[mask, col] = df[other_col]` creates significant overhead from boolean masking and pandas' indexer.
 **Action:** Use vectorized `np.minimum(df['A'], df['B'])` directly, which evaluates in C-level natively and avoids boolean masking overhead entirely, yielding a ~3x-5x speedup for clipping/capping logic.
+
+## $(date +%Y-%m-%d) - [Rule-Based Anomaly Detection Optimization]
+**Learning:** The current implementation for the "Rule-Based Anomaly Detection" section in `build_notebook.py` constructs a list of boolean masks sequentially by evaluating pandas Series with `.values` in tuples, and then putting them in a 2D array. Bypassing the creation of intermediate Pandas Series/Index objects and building the boolean conditions directly with raw numpy arrays provides an additional ~1.7x speedup over the previous tuple-list approach.
+**Action:** Extract raw numpy arrays upfront and build conditions directly into a 2D mask array when you need multiple boolean masks for the same DataFrame/index.
