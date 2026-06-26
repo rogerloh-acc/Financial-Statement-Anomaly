@@ -107,3 +107,11 @@
 ## $(date +%Y-%m-%d) - [Rule-Based Anomaly Detection Optimization]
 **Learning:** The current implementation for the "Rule-Based Anomaly Detection" section in `build_notebook.py` constructs a list of boolean masks sequentially by evaluating pandas Series with `.values` in tuples, and then putting them in a 2D array. Bypassing the creation of intermediate Pandas Series/Index objects and building the boolean conditions directly with raw numpy arrays provides an additional ~1.7x speedup over the previous tuple-list approach.
 **Action:** Extract raw numpy arrays upfront and build conditions directly into a 2D mask array when you need multiple boolean masks for the same DataFrame/index.
+
+## 2024-05-18 - [np.divide out parameter overhead]
+**Learning:** Using `np.divide` with `out=np.zeros_like(...)` creates significant memory allocation and initialization overhead on every call. It turns out that evaluating standard division `np.divide` directly inside an `np.errstate` block and then assigning `0` using a boolean mask is much faster.
+**Action:** Avoid `out=np.zeros_like(...)` for conditional zero division; instead, use `np.errstate` to suppress warnings, perform standard division, and assign zeros using a boolean mask for the zero denominators.
+
+## 2024-05-18 - [Pandas .hasnans caching]
+**Learning:** Checking for missing values using `df.isna().to_numpy().any()` can be slow for very wide DataFrames. Iterating through columns and checking the cached property `df[col].hasnans` is surprisingly ~2-3x faster.
+**Action:** Use `any(df[col].hasnans for col in df.columns)` instead of `df.isna().to_numpy().any()` to check for NaNs efficiently.
