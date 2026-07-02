@@ -119,3 +119,6 @@
 ## 2026-06-25 - [Bypassing Empty Object Array Allocation]
 **Learning:** When mapping a large array of integer IDs to string values using a pre-computed numpy array (`mapping_array`), assigning the output to a pre-allocated empty object array via slice assignment (`flags[:] = mapping_array[comb_ids]`) incurs unnecessary allocation overhead and memory copying.
 **Action:** Directly assign the result of the vectorized indexing (`flags = mapping_array[comb_ids]`). This avoids pre-allocating `np.empty` and yields a ~3x performance boost for object array assignments.
+## 2026-07-02 - [Beneish Pre-calculation Optimization]
+**Learning:** When calculating complex formulas like Beneish M-Score that rely on intermediate metrics (like financial ratios), recalculating them from underlying raw variables rather than reusing previously computed dataframe columns incurs unnecessary operational overhead.
+**Action:** Always verify if formula components have been computed earlier in the codebase. Pre-calculating combined variables (like `asset_quality`) before doing shifting/rolling operations allows applying them directly and eliminates repetitive array math across multiple groups, yielding minor but scalable speedups.

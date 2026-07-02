@@ -312,12 +312,18 @@ The Beneish M-Score is a mathematical model that uses financial ratios to identi
 cells.append(nbf.v4.new_code_cell("""def calculate_beneish(df):
     df_b = df.copy()
 
+    # Pre-calculate components to avoid redundancy
+    df_b['asset_quality'] = 1 - safe_div(df_b['current_assets'], df_b['total_assets'])
+    df_b['leverage'] = safe_div((df_b['current_liabilities'].values + df_b['long_term_debt'].values), df_b['total_assets'])
+
     # Calculate previous year values
     # ⚡ Bolt Optimization: Replace grouped[cols].shift(1) with whole-column shift + boolean masking.
     # Bypassing the groupby machinery and utilizing raw numpy operations provides a ~10x speedup
     # for these shifting operations across companies.
-    cols_to_shift = ['revenue', 'accounts_receivable', 'gross_profit', 'total_assets', 'current_assets', 'depreciation', 'long_term_debt', 'current_liabilities']
-    prev_cols = ['prev_rev', 'prev_rec', 'prev_gp', 'prev_ta', 'prev_ca', 'prev_dep', 'prev_lt_debt', 'prev_cl']
+    # ⚡ Bolt Optimization: Reuse pre-calculated features already present in the DataFrame instead
+    # of recalculating intermediate metrics like margins and turnover ratios from raw components.
+    cols_to_shift = ['revenue', 'receivables_to_revenue', 'gross_margin', 'asset_quality', 'depreciation_to_assets', 'leverage']
+    prev_cols = ['prev_rev', 'prev_rec_to_rev', 'prev_gm', 'prev_aq', 'prev_dep_rate', 'prev_lev']
 
     companies_arr = df_b['company'].values
     mask = np.ones(len(df_b), dtype=bool)
@@ -326,47 +332,38 @@ cells.append(nbf.v4.new_code_cell("""def calculate_beneish(df):
     # ⚡ Bolt Optimization: Replace np.roll with empty_like + slicing
     # np.roll computes a wraparound which we overwrite anyway, empty_like avoids
     # that extra computation overhead and is ~1.4x faster.
-    # We also assign the default fill value (1.0) directly to the boundaries, avoiding a slow pandas .fillna(1) pass.
+    # We also assign the default fill value directly to the boundaries, avoiding a slow pandas .fillna(1) pass.
     arr = df_b[cols_to_shift].to_numpy()
     shifted = np.empty_like(arr, dtype=float)
-    shifted[0] = 1.0
+    fill_values = np.array([1.0, 1.0, 1.0, 0.0, 1.0, 2.0])
+    shifted[0] = fill_values
     shifted[1:] = arr[:-1]
-    shifted[mask] = 1.0
+    shifted[mask] = fill_values
     df_b[prev_cols] = shifted
 
     # DSRI
-    rec_to_rev_t = safe_div(df_b['accounts_receivable'], df_b['revenue'])
-    rec_to_rev_t1 = safe_div(df_b['prev_rec'], df_b['prev_rev'])
-    df_b['DSRI'] = safe_div(rec_to_rev_t, rec_to_rev_t1)
+    df_b['DSRI'] = safe_div(df_b['receivables_to_revenue'], df_b['prev_rec_to_rev'])
 
     # GMI
-    gm_t = safe_div(df_b['gross_profit'], df_b['revenue'])
-    gm_t1 = safe_div(df_b['prev_gp'], df_b['prev_rev'])
-    df_b['GMI'] = safe_div(gm_t1, gm_t)
+    df_b['GMI'] = safe_div(df_b['prev_gm'], df_b['gross_margin'])
 
     # AQI (Simplified)
-    aq_t = 1 - safe_div(df_b['current_assets'], df_b['total_assets'])
-    aq_t1 = 1 - safe_div(df_b['prev_ca'], df_b['prev_ta'])
-    df_b['AQI'] = safe_div(aq_t, aq_t1)
+    df_b['AQI'] = safe_div(df_b['asset_quality'], df_b['prev_aq'])
 
     # SGI
     df_b['SGI'] = safe_div(df_b['revenue'], df_b['prev_rev'])
 
     # DEPI
-    dep_rate_t = safe_div(df_b['depreciation'], df_b['total_assets'])
-    dep_rate_t1 = safe_div(df_b['prev_dep'], df_b['prev_ta'])
-    df_b['DEPI'] = safe_div(dep_rate_t1, dep_rate_t)
+    df_b['DEPI'] = safe_div(df_b['prev_dep_rate'], df_b['depreciation_to_assets'])
 
     # SGAI (Simplified - using operating margin diff as proxy since SG&A isn't explicit)
     df_b['SGAI'] = 1.0 # Defaulting to 1.0 for simplicity with sample data
 
     # LVGI
-    lev_t = safe_div((df_b['current_liabilities'].values + df_b['long_term_debt'].values), df_b['total_assets'])
-    lev_t1 = safe_div((df_b['prev_cl'].values + df_b['prev_lt_debt'].values), df_b['prev_ta'])
-    df_b['LVGI'] = safe_div(lev_t, lev_t1)
+    df_b['LVGI'] = safe_div(df_b['leverage'], df_b['prev_lev'])
 
     # TATA
-    df_b['TATA'] = safe_div((df_b['net_income'].values - df_b['operating_cash_flow'].values), df_b['total_assets'])
+    df_b['TATA'] = df_b['accruals_ratio']
 
     # Calculate M Score
     # ⚡ Bolt Optimization: Replace chained arithmetic with np.dot() on a unified NumPy array.
