@@ -334,15 +334,16 @@ cells.append(nbf.v4.new_code_cell("""def calculate_beneish(df):
     shifted[mask] = 1.0
     df_b[prev_cols] = shifted
 
+    # ⚡ Bolt Optimization: Reuse precomputed financial ratios instead of recalculating them from raw components.
+    # We already computed metrics like receivables_to_revenue, gross_margin, depreciation_to_assets,
+    # and accruals_ratio in Section 5. Reusing them directly via `.values` avoids redundant calculation overhead.
     # DSRI
-    rec_to_rev_t = safe_div(df_b['accounts_receivable'], df_b['revenue'])
     rec_to_rev_t1 = safe_div(df_b['prev_rec'], df_b['prev_rev'])
-    df_b['DSRI'] = safe_div(rec_to_rev_t, rec_to_rev_t1)
+    df_b['DSRI'] = safe_div(df_b['receivables_to_revenue'].values, rec_to_rev_t1)
 
     # GMI
-    gm_t = safe_div(df_b['gross_profit'], df_b['revenue'])
     gm_t1 = safe_div(df_b['prev_gp'], df_b['prev_rev'])
-    df_b['GMI'] = safe_div(gm_t1, gm_t)
+    df_b['GMI'] = safe_div(gm_t1, df_b['gross_margin'].values)
 
     # AQI (Simplified)
     aq_t = 1 - safe_div(df_b['current_assets'], df_b['total_assets'])
@@ -353,9 +354,8 @@ cells.append(nbf.v4.new_code_cell("""def calculate_beneish(df):
     df_b['SGI'] = safe_div(df_b['revenue'], df_b['prev_rev'])
 
     # DEPI
-    dep_rate_t = safe_div(df_b['depreciation'], df_b['total_assets'])
     dep_rate_t1 = safe_div(df_b['prev_dep'], df_b['prev_ta'])
-    df_b['DEPI'] = safe_div(dep_rate_t1, dep_rate_t)
+    df_b['DEPI'] = safe_div(dep_rate_t1, df_b['depreciation_to_assets'].values)
 
     # SGAI (Simplified - using operating margin diff as proxy since SG&A isn't explicit)
     df_b['SGAI'] = 1.0 # Defaulting to 1.0 for simplicity with sample data
@@ -366,7 +366,7 @@ cells.append(nbf.v4.new_code_cell("""def calculate_beneish(df):
     df_b['LVGI'] = safe_div(lev_t, lev_t1)
 
     # TATA
-    df_b['TATA'] = safe_div((df_b['net_income'].values - df_b['operating_cash_flow'].values), df_b['total_assets'])
+    df_b['TATA'] = df_b['accruals_ratio'].values
 
     # Calculate M Score
     # ⚡ Bolt Optimization: Replace chained arithmetic with np.dot() on a unified NumPy array.

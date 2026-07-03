@@ -119,3 +119,7 @@
 ## 2026-06-25 - [Bypassing Empty Object Array Allocation]
 **Learning:** When mapping a large array of integer IDs to string values using a pre-computed numpy array (`mapping_array`), assigning the output to a pre-allocated empty object array via slice assignment (`flags[:] = mapping_array[comb_ids]`) incurs unnecessary allocation overhead and memory copying.
 **Action:** Directly assign the result of the vectorized indexing (`flags = mapping_array[comb_ids]`). This avoids pre-allocating `np.empty` and yields a ~3x performance boost for object array assignments.
+
+## 2024-07-03 - [Performance Optimization: Reusing precomputed features]
+**Learning:** When calculating complex models like the Beneish M-Score which rely on many intermediate financial ratios, calculating them from scratch each time causes significant overhead. The same metrics might already have been computed in earlier feature engineering steps.
+**Action:** When applying formulas or scoring models (like Beneish M-Score) that rely on intermediate metrics (like financial ratios), reuse the previously computed features already present in the DataFrame instead of recalculating them from raw underlying components to avoid redundant computational overhead. Use `.values` to extract the numpy arrays from pandas series for fastest performance.
