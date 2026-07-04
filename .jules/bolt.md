@@ -119,3 +119,7 @@
 ## 2026-06-25 - [Bypassing Empty Object Array Allocation]
 **Learning:** When mapping a large array of integer IDs to string values using a pre-computed numpy array (`mapping_array`), assigning the output to a pre-allocated empty object array via slice assignment (`flags[:] = mapping_array[comb_ids]`) incurs unnecessary allocation overhead and memory copying.
 **Action:** Directly assign the result of the vectorized indexing (`flags = mapping_array[comb_ids]`). This avoids pre-allocating `np.empty` and yields a ~3x performance boost for object array assignments.
+
+## 2024-11-20 - [Reuse Pre-Calculated Features]
+**Learning:** During complex scoring models like Beneish M-Score, several intermediate metrics (like receivables to revenue or gross margin) are often calculated from scratch using raw underlying columns. If these same ratios were already calculated and stored in the DataFrame during earlier feature engineering steps, recalculating them is redundant and introduces significant mathematical array operation overhead.
+**Action:** Always scan previous feature engineering or data preparation steps to see if the required derived metric already exists as a column in the DataFrame. Direct column referencing (`df['existing_ratio']`) completely avoids the computational cost of recalculation compared to re-executing division and masking operations.
