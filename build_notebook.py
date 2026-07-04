@@ -334,6 +334,9 @@ cells.append(nbf.v4.new_code_cell("""def calculate_beneish(df):
     shifted[mask] = 1.0
     df_b[prev_cols] = shifted
 
+    # ⚡ Bolt Optimization: Reuse precomputed financial ratios instead of recalculating them from raw components.
+    # We already computed metrics like receivables_to_revenue, gross_margin, depreciation_to_assets,
+    # and accruals_ratio in Section 5. Reusing them directly via `.values` avoids redundant calculation overhead.
     # DSRI
     # ⚡ Bolt Optimization: Reuse already calculated receivables_to_revenue instead of recalculating
     rec_to_rev_t1 = safe_div(df_b['prev_rec'], df_b['prev_rev'])
