@@ -126,3 +126,7 @@
 ## $(date +%Y-%m-%d) - Vectorized Risk Level Assignment
 **Learning:** `np.select` on object arrays is known to be slow. Previous optimization successfully eliminated `np.select` by chaining `.astype(int)` additions (e.g., `(score_arr >= 2).astype(int) + (score_arr >= 4).astype(int)`). However, for categorizing continuous data into discrete levels using sequential thresholds, `np.searchsorted(bins, arr, side='right')` is even faster, as it leverages binary search directly in C, rather than performing multiple array-wide boolean comparisons and casting them to integers.
 **Action:** When mapping numerical arrays to discrete bins or categories, prefer `np.searchsorted` over chaining boolean `.astype(int)` additions or `np.select` for maximum performance.
+
+## 2024-07-15 - [Batching vs Separate 1D Operations]
+**Learning:** Extracting multiple Pandas columns into a 2D NumPy array (e.g., `df[['c1', 'c2']].to_numpy()`) incurs memory copying overhead because the columns may not be contiguous in memory. For simple operations like element-wise division, this overhead can outweigh vectorization benefits, making separate 1D array operations faster. However, if standard arithmetic operators are used and assigned directly to a pre-allocated slice without intermediate allocations (e.g., `m_diff[1:] = m_arr[1:] - m_arr[:-1]`), combined 2D array operations *can* be faster than iterative 1D operations.
+**Action:** Profile memory-copy costs before batching separate column operations into a single 2D array operation.
