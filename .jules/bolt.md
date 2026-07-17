@@ -130,3 +130,7 @@
 ## 2024-07-15 - [Batching vs Separate 1D Operations]
 **Learning:** Extracting multiple Pandas columns into a 2D NumPy array (e.g., `df[['c1', 'c2']].to_numpy()`) incurs memory copying overhead because the columns may not be contiguous in memory. For simple operations like element-wise division, this overhead can outweigh vectorization benefits, making separate 1D array operations faster. However, if standard arithmetic operators are used and assigned directly to a pre-allocated slice without intermediate allocations (e.g., `m_diff[1:] = m_arr[1:] - m_arr[:-1]`), combined 2D array operations *can* be faster than iterative 1D operations.
 **Action:** Profile memory-copy costs before batching separate column operations into a single 2D array operation.
+
+## 2024-05-24 - Pandas 2D Numpy Array Extraction Overhead
+**Learning:** Extracting multiple Pandas columns into a 2D NumPy array (`df[cols].to_numpy()`) creates significant memory copying overhead if the columns are not contiguous in memory. For simple column-wise math, extracting into a 2D array can be much slower than just looping over the columns and operating on 1D arrays (`df[col].values`).
+**Action:** Before batching DataFrame columns into a 2D NumPy array for vectorization, verify if a simple column loop on 1D `.values` arrays is faster.
