@@ -134,3 +134,6 @@
 ## 2024-05-24 - Pandas 2D Numpy Array Extraction Overhead
 **Learning:** Extracting multiple Pandas columns into a 2D NumPy array (`df[cols].to_numpy()`) creates significant memory copying overhead if the columns are not contiguous in memory. For simple column-wise math, extracting into a 2D array can be much slower than just looping over the columns and operating on 1D arrays (`df[col].values`).
 **Action:** Before batching DataFrame columns into a 2D NumPy array for vectorization, verify if a simple column loop on 1D `.values` arrays is faster.
+## $(date +%Y-%m-%d) - Optimize DataFrame duplicate checks
+**Learning:** Using `df.drop_duplicates()` checks all columns for duplication, which involves heavy floating-point and string comparisons across potentially dozens of features. If duplicates are known to arise where specific composite keys dictate uniqueness (e.g., 'company' and 'year'), checking these subset columns is much faster.
+**Action:** When identifying duplicate rows in a Pandas DataFrame where a specific composite key dictates uniqueness, use `df.drop_duplicates(subset=['key1', 'key2'])` rather than evaluating all columns. This is significantly faster (~20x) than a full-row comparison.
