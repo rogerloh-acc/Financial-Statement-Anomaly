@@ -1,24 +1,24 @@
 company,year,sector,anomaly_score,anomaly_risk_level,beneish_m_score,beneish_flag,isolation_forest_flag,key_red_flags
-Delta Tech,2023,Tech,8,High,0.04774005769812373,True,True,"Rec > Rev Growth, Weak OCF/NI, Sharp GM Drop, Rev Growth vs OCF Drop, High Accruals, Beneish M-Score > -2.22"
+Delta Tech,2023,Tech,8,High,0.047740057698124616,True,True,"Rec > Rev Growth, Weak OCF/NI, Sharp GM Drop, Rev Growth vs OCF Drop, High Accruals, Beneish M-Score > -2.22"
 Alpha Corp,2023,Manufacturing,4,High,-2.0705178435453124,True,False,"Rec > Rev Growth, Debt Spike, Beneish M-Score > -2.22"
-Delta Tech,2019,Tech,2,Medium,1287.0742035209691,True,False,Beneish M-Score > -2.22
-Beta Ltd,2019,Retail,2,Medium,1111.5559112660917,True,False,Beneish M-Score > -2.22
-Epsilon Group,2019,Manufacturing,2,Medium,776.2515193808347,True,False,Beneish M-Score > -2.22
+Delta Tech,2019,Tech,2,Medium,1287.0742035209694,True,False,Beneish M-Score > -2.22
+Beta Ltd,2019,Retail,2,Medium,1111.5559112660915,True,False,Beneish M-Score > -2.22
+Epsilon Group,2019,Manufacturing,2,Medium,776.2515193808348,True,False,Beneish M-Score > -2.22
 Gamma Inc,2019,Tech,2,Medium,753.6534060049328,True,False,Beneish M-Score > -2.22
-Alpha Corp,2019,Manufacturing,2,Medium,535.7772426202383,True,False,Beneish M-Score > -2.22
-Epsilon Group,2022,Manufacturing,2,Medium,-2.5096129337400326,False,False,"Inv > Rev Growth, Sharp GM Drop"
-Gamma Inc,2021,Tech,2,Medium,-2.5135231382826,False,False,"Rec > Rev Growth, Inv > Rev Growth"
+Alpha Corp,2019,Manufacturing,2,Medium,535.7772426202382,True,False,Beneish M-Score > -2.22
+Epsilon Group,2022,Manufacturing,2,Medium,-2.509612933740032,False,False,"Inv > Rev Growth, Sharp GM Drop"
+Gamma Inc,2021,Tech,2,Medium,-2.5135231382826007,False,False,"Rec > Rev Growth, Inv > Rev Growth"
 Epsilon Group,2020,Manufacturing,2,Medium,-2.565748794637951,False,False,"Inv > Rev Growth, Debt Spike"
 Beta Ltd,2020,Retail,2,Medium,-2.669600309080943,False,False,"Inv > Rev Growth, Debt Spike"
 Alpha Corp,2021,Manufacturing,1,Low,-2.252911877602007,False,False,Rec > Rev Growth
-Beta Ltd,2021,Retail,1,Low,-2.2679016169134805,False,False,Rec > Rev Growth
-Gamma Inc,2022,Tech,1,Low,-2.429001301628073,False,False,Sharp GM Drop
-Gamma Inc,2020,Tech,1,Low,-2.4881980193313598,False,False,Sharp GM Drop
+Beta Ltd,2021,Retail,1,Low,-2.26790161691348,False,False,Rec > Rev Growth
+Gamma Inc,2022,Tech,1,Low,-2.4290013016280736,False,False,Sharp GM Drop
+Gamma Inc,2020,Tech,1,Low,-2.488198019331359,False,False,Sharp GM Drop
 Delta Tech,2020,Tech,1,Low,-2.4909533658563117,False,False,Sharp GM Drop
 Beta Ltd,2023,Retail,1,Low,-2.543258359652393,False,False,Rec > Rev Growth
 Beta Ltd,2022,Retail,1,Low,-2.6965649188312732,False,True,Inv > Rev Growth
 Delta Tech,2022,Tech,1,Low,-2.832955718923813,False,True,Debt Spike
-Epsilon Group,2023,Manufacturing,1,Low,-2.901727866202791,False,False,Inv > Rev Growth
+Epsilon Group,2023,Manufacturing,1,Low,-2.9017278662027906,False,False,Inv > Rev Growth
 Alpha Corp,2020,Manufacturing,1,Low,-2.994181467848928,False,False,Debt Spike
 Gamma Inc,2023,Tech,0,Low,-2.4169452074233755,False,False,
 Epsilon Group,2021,Manufacturing,0,Low,-2.7052100718831302,False,False,
