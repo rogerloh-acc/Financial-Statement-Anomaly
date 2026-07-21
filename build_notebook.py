@@ -266,8 +266,11 @@ for g_col, new_g_col in zip(growth_cols, new_growth_cols):
     with np.errstate(divide='ignore', invalid='ignore'):
         # ⚡ Bolt Optimization: Replace separate subtract and divide operations with a single division and subtract 1.
         # Mathematically, (New - Old) / Old is equivalent to (New / Old) - 1.
-        # Standard operators are faster here since we avoid .to_numpy() overhead and memory copy.
-        pct[1:] = (arr[1:] / arr[:-1]) - 1.0
+        # Combine this with pre-allocated memory slices using np.divide(..., out=slice)
+        # and np.subtract(slice, 1.0, out=slice) to avoid allocating intermediate arrays
+        # and to reduce array reads, providing a significant speedup over standard slice assignment.
+        np.divide(arr[1:], arr[:-1], out=pct[1:])
+        np.subtract(pct[1:], 1.0, out=pct[1:])
 
     # ⚡ Bolt Optimization: Apply missing value boundaries directly on the array instead of doing a full pass
     # with df.loc and then .fillna on the resulting dataframe. By masking group boundary crossings directly
@@ -288,7 +291,10 @@ for m_col, new_m_col in zip(margin_cols, new_margin_cols):
     arr = df[m_col].values
     diff = np.empty_like(arr, dtype=float)
     diff[0] = 0.0
-    diff[1:] = arr[1:] - arr[:-1]
+    # ⚡ Bolt Optimization: While standard arithmetic operators (A - B) are optimal for full arrays,
+    # they introduce overhead when assigning to slices by evaluating and creating a temporary array.
+    # Use np.subtract(A, B, out=slice) to write directly to the pre-allocated slice and avoid the allocation.
+    np.subtract(arr[1:], arr[:-1], out=diff[1:])
     diff[mask] = 0.0
     np.nan_to_num(diff, copy=False, nan=0.0, posinf=np.inf, neginf=-np.inf)
     df[new_m_col] = diff
@@ -326,19 +332,13 @@ cells.append(nbf.v4.new_code_cell("""def calculate_beneish(df):
     mask = np.ones(len(df_b), dtype=bool)
     mask[1:] = companies_arr[1:] != companies_arr[:-1]
 
-    # ⚡ Bolt Optimization: Replace np.roll with empty_like + slicing
-    # np.roll computes a wraparound which we overwrite anyway, empty_like avoids
-    # that extra computation overhead and is ~1.4x faster.
-    # We also assign the default fill value (1.0) directly to the boundaries, avoiding a slow pandas .fillna(1) pass.
-    # Furthermore, running this assignment over 1D arrays individually avoids the heavy memory copy
-    # overhead of extracting multiple non-contiguous columns into a 2D numpy array via .to_numpy().
-    for col, prev_col in zip(cols_to_shift, prev_cols):
-        arr = df_b[col].values
-        shifted = np.empty_like(arr, dtype=float)
-        shifted[0] = 1.0
-        shifted[1:] = arr[:-1]
-        shifted[mask] = 1.0
-        df_b[prev_col] = shifted
+    # ⚡ Bolt Optimization: Replace loop over 1D array slices with native pandas subset assignment.
+    # When assigning a single value (like 1.0) to a subset of rows across multiple columns in Pandas,
+    # using `df.loc[mask, cols] = value` is faster and more native than iterating through columns
+    # and modifying underlying NumPy arrays one by one.
+    df_b[prev_cols] = df_b[cols_to_shift].shift(1)
+    df_b.loc[mask, prev_cols] = 1.0
+    df_b.loc[0, prev_cols] = 1.0
 
     # ⚡ Bolt Optimization: Reuse precomputed financial ratios instead of recalculating them from raw components.
     # We already computed metrics like receivables_to_revenue, gross_margin, depreciation_to_assets,
