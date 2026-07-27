@@ -152,3 +152,11 @@
 ## $(date +%Y-%m-%d) - [DataFrame Subset Assignment vs 1D Numpy Shifting]
 **Learning:** While `df.loc[mask, cols] = value` is fast for assigning single values to subsets of columns, using Pandas `.shift(1)` on multiple columns and then applying `.loc` assignment on the resulting DataFrame incurs significant dataframe alignment and memory assignment overhead. Extracting the underlying `1D .values` arrays, manually shifting via slice assignment (`shifted[1:] = arr[:-1]`), and applying the boundary mask directly to the numpy array (`shifted[mask] = 1.0`) completely bypasses Pandas overhead, providing a ~2.5x speedup for groupby-like emulation.
 **Action:** When emulating grouped `.shift(1)` across multiple columns, prefer extracting 1D numpy arrays, shifting via slice assignment, and directly applying the boundary mask to the arrays over relying on Pandas dataframe shift and `.loc` boundary assignment.
+
+## $(date +%Y-%m-%d) - [Pandas Categorical Assignment]
+**Learning:** Instantiating and assigning a large Pandas column with Python string objects using array indexing (`levels[idx]`) is extremely slow due to object creation overhead.
+**Action:** Use `pd.Categorical.from_codes(idx, categories=[...])` which is >10x faster as it utilizes integer codes internally.
+
+## $(date +%Y-%m-%d) - [Avoid replacing 1D numpy array assignments with pandas .loc]
+**Learning:** Although `df.loc[mask, cols] = value` provides a clean syntax for subset assignments across multiple columns, it introduces Pandas overhead for DataFrame alignment and block-management. Attempting to replace direct boolean indexing on a 1D NumPy array (`arr[mask] = 1.0`) inside a loop with a post-loop `.loc` assignment is a de-optimization and results in ~30% slower execution.
+**Action:** Stick to mutating 1D `.values` arrays directly when iterating through columns.
