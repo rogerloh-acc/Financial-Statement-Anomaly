@@ -160,3 +160,7 @@
 ## $(date +%Y-%m-%d) - [Avoid replacing 1D numpy array assignments with pandas .loc]
 **Learning:** Although `df.loc[mask, cols] = value` provides a clean syntax for subset assignments across multiple columns, it introduces Pandas overhead for DataFrame alignment and block-management. Attempting to replace direct boolean indexing on a 1D NumPy array (`arr[mask] = 1.0`) inside a loop with a post-loop `.loc` assignment is a de-optimization and results in ~30% slower execution.
 **Action:** Stick to mutating 1D `.values` arrays directly when iterating through columns.
+
+## 2024-05-24 - Do not replace fast 1D NumPy boolean assignment with Pandas `.loc`
+**Learning:** A previous optimization attempt replaced a fast `shifted[mask] = 1.0` inside a loop with a batch `df_b.loc[mask, prev_cols] = 1.0` outside the loop in pandas. However, because `shifted` is a raw C-level 1D NumPy array, its assignment is virtually instantaneous. Pandas `.loc` subset assignment across multiple columns requires DataFrame alignment and block-management overhead, which actually made the "optimization" ~25% slower than simply assigning to the numpy array inside the loop.
+**Action:** When working with 1D NumPy arrays extracted via `.values`, keep assignment operations directly on the NumPy arrays rather than reverting back to Pandas `.loc` subset assignments, even if it means keeping the assignment inside a small loop.

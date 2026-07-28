@@ -340,12 +340,12 @@ cells.append(nbf.v4.new_code_cell("""def calculate_beneish(df):
         arr = df_b[col].values
         shifted = np.empty_like(arr, dtype=float)
         shifted[1:] = arr[:-1]
+        # ⚡ Bolt Optimization: Do not replace direct 1D NumPy array boolean indexing (e.g., `arr[mask] = 1.0`)
+        # inside a loop with Pandas `.loc` subset assignment across columns (`df.loc[mask, cols] = 1.0`).
+        # Direct boolean indexing on C-level 1D NumPy arrays is significantly faster as it avoids
+        # Pandas DataFrame alignment, block-management, and indexing overhead.
+        shifted[mask] = 1.0
         df_b[p_col] = shifted
-
-    # ⚡ Bolt Optimization: When assigning a single value to a subset of rows across multiple
-    # columns in Pandas, use df.loc[mask, cols] = value rather than iterating through columns
-    # and modifying underlying NumPy arrays, as it natively handles the subset assignment faster.
-    df_b.loc[mask, prev_cols] = 1.0
 
     # ⚡ Bolt Optimization: Reuse precomputed financial ratios instead of recalculating them from raw components.
     # We already computed metrics like receivables_to_revenue, gross_margin, depreciation_to_assets,
