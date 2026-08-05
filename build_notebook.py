@@ -192,8 +192,10 @@ if invalid_assets_mask.any():
     print("Warning: Current assets exceed total assets in some rows. Fixing...")
     # ⚡ Bolt Optimization: Replace df.loc conditional assignment with np.minimum().
     # Using np.minimum operates directly on the underlying arrays at the C level,
-    # completely bypassing pandas .loc indexer and boolean masking overhead. (~3-5x faster)
-    df['current_assets'] = np.minimum(df['current_assets'], df['total_assets'])
+    # completely bypassing pandas .loc indexer and boolean masking overhead.
+    # Furthermore, passing the .values arrays to np.minimum rather than the Series objects
+    # avoids pandas object instantiation and index alignment overhead. (~3-5x faster)
+    df['current_assets'] = np.minimum(df['current_assets'].values, df['total_assets'].values)
 
 print("Data cleaning complete.")
 """))

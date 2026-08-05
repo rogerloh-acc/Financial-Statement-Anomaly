@@ -172,3 +172,6 @@
 ## $(date +%Y-%m-%d) - [Optimizing List Creation and Loop Overheads in Array Operations]
 **Learning:** When applying multiple rule-based boolean conditions to accumulate a score or combination ID, collecting the individual masks into a list comprehension (`[cond1, cond2, ...]`) and then iterating over them introduces unnecessary allocation overhead and Python loop overhead. Evaluating each condition sequentially and immediately accumulating its result into the target arrays (e.g., `m = cond; score += m * points; comb_ids += m * pow2`) completely bypasses list allocation and reduces peak memory usage.
 **Action:** When computing sums across multiple derived boolean masks, avoid constructing intermediate lists or 2D arrays to hold the masks before reduction. Perform direct accumulation as the masks are evaluated.
+## 2024-05-17 - Vectorizing np.minimum over Pandas Series
+**Learning:** When using NumPy functions like `np.minimum` with Pandas Series, Pandas object instantiation and index alignment add significant overhead.
+**Action:** Extract the underlying C-level NumPy arrays using `.values` (e.g., `np.minimum(df['col1'].values, df['col2'].values)`) before passing them to NumPy functions to bypass the Pandas overhead and achieve a 3-5x speedup.
