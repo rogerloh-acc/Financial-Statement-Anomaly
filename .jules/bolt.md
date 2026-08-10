@@ -175,3 +175,6 @@
 ## 2024-05-17 - Vectorizing np.minimum over Pandas Series
 **Learning:** When using NumPy functions like `np.minimum` with Pandas Series, Pandas object instantiation and index alignment add significant overhead.
 **Action:** Extract the underlying C-level NumPy arrays using `.values` (e.g., `np.minimum(df['col1'].values, df['col2'].values)`) before passing them to NumPy functions to bypass the Pandas overhead and achieve a 3-5x speedup.
+## $(date +%Y-%m-%d) - [Pandas Scalar Comparison Assignment]
+**Learning:** When generating a boolean flag column based on a simple scalar comparison (e.g., `df['flag'] = df['score'] > -1`), checking against the Pandas Series incurs internal index alignment overhead even when assigning directly back to the identical dataframe.
+**Action:** When performing scalar comparisons to create a boolean mask, append `.values` to the evaluated Series (`df['score'].values > -1`). This evaluates strictly as a NumPy comparison, avoiding Pandas overhead and speeding up execution time safely.
