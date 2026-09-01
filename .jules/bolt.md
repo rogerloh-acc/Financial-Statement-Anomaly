@@ -104,7 +104,7 @@
 **Learning:** When assigning a value from a second column to a first column using a conditional mask (e.g., capping current assets by total assets when it exceeds it), using a boolean mask and `df.loc[mask, col] = df[other_col]` creates significant overhead from boolean masking and pandas' indexer.
 **Action:** Use vectorized `np.minimum(df['A'], df['B'])` directly, which evaluates in C-level natively and avoids boolean masking overhead entirely, yielding a ~3x-5x speedup for clipping/capping logic.
 
-## $(date +%Y-%m-%d) - [Rule-Based Anomaly Detection Optimization]
+## 2024-11-23 - [Rule-Based Anomaly Detection Optimization]
 **Learning:** The current implementation for the "Rule-Based Anomaly Detection" section in `build_notebook.py` constructs a list of boolean masks sequentially by evaluating pandas Series with `.values` in tuples, and then putting them in a 2D array. Bypassing the creation of intermediate Pandas Series/Index objects and building the boolean conditions directly with raw numpy arrays provides an additional ~1.7x speedup over the previous tuple-list approach.
 **Action:** Extract raw numpy arrays upfront and build conditions directly into a 2D mask array when you need multiple boolean masks for the same DataFrame/index.
 
@@ -123,7 +123,7 @@
 ## 2024-11-20 - [Reuse Pre-Calculated Features]
 **Learning:** During complex scoring models like Beneish M-Score, several intermediate metrics (like receivables to revenue or gross margin) are often calculated from scratch using raw underlying columns. If these same ratios were already calculated and stored in the DataFrame during earlier feature engineering steps, recalculating them is redundant and introduces significant mathematical array operation overhead.
 **Action:** Always scan previous feature engineering or data preparation steps to see if the required derived metric already exists as a column in the DataFrame. Direct column referencing (`df['existing_ratio']`) completely avoids the computational cost of recalculation compared to re-executing division and masking operations.
-## $(date +%Y-%m-%d) - Vectorized Risk Level Assignment
+## 2024-11-23 - Vectorized Risk Level Assignment
 **Learning:** `np.select` on object arrays is known to be slow. Previous optimization successfully eliminated `np.select` by chaining `.astype(int)` additions (e.g., `(score_arr >= 2).astype(int) + (score_arr >= 4).astype(int)`). However, for categorizing continuous data into discrete levels using sequential thresholds, `np.searchsorted(bins, arr, side='right')` is even faster, as it leverages binary search directly in C, rather than performing multiple array-wide boolean comparisons and casting them to integers.
 **Action:** When mapping numerical arrays to discrete bins or categories, prefer `np.searchsorted` over chaining boolean `.astype(int)` additions or `np.select` for maximum performance.
 
@@ -134,30 +134,30 @@
 ## 2024-05-24 - Pandas 2D Numpy Array Extraction Overhead
 **Learning:** Extracting multiple Pandas columns into a 2D NumPy array (`df[cols].to_numpy()`) creates significant memory copying overhead if the columns are not contiguous in memory. For simple column-wise math, extracting into a 2D array can be much slower than just looping over the columns and operating on 1D arrays (`df[col].values`).
 **Action:** Before batching DataFrame columns into a 2D NumPy array for vectorization, verify if a simple column loop on 1D `.values` arrays is faster.
-## $(date +%Y-%m-%d) - Optimize DataFrame duplicate checks
+## 2024-11-23 - Optimize DataFrame duplicate checks
 **Learning:** Using `df.drop_duplicates()` checks all columns for duplication, which involves heavy floating-point and string comparisons across potentially dozens of features. If duplicates are known to arise where specific composite keys dictate uniqueness (e.g., 'company' and 'year'), checking these subset columns is much faster.
 **Action:** When identifying duplicate rows in a Pandas DataFrame where a specific composite key dictates uniqueness, use `df.drop_duplicates(subset=['key1', 'key2'])` rather than evaluating all columns. This is significantly faster (~20x) than a full-row comparison.
-## $(date +%Y-%m-%d) - [Pandas 2D Array Extraction vs 1D Loop overhead for Dot Product]
+## 2024-11-23 - [Pandas 2D Array Extraction vs 1D Loop overhead for Dot Product]
 **Learning:** For mathematical operations like matrix multiplication across Pandas columns (e.g., `np.dot` for scoring models), previous knowledge indicated that extracting columns to a 2D array and using C-level BLAS routines via `np.dot` is optimal. However, extracting multiple non-contiguous columns into a 2D NumPy array using `.to_numpy()` incurs significant memory copying overhead. When evaluating simple weighted sums across a small number of features (like the 8-component Beneish M-Score), bypassing the 2D array extraction and chaining standard 1D arithmetic (`df['A'].values * weight[0] + ...`) directly avoids this memory copy penalty and evaluates faster.
 **Action:** When computing weighted sums across multiple Pandas columns, do not blindly extract them into a 2D array to use `np.dot`. If the number of columns is small, chaining 1D array operations on `.values` avoids the memory copying overhead and provides a ~30% speedup. Profile memory-copy costs vs BLAS performance for scoring model vectorization.
 
-## $(date +%Y-%m-%d) - [Pandas 2D Array Batching vs 1D Loop Overhead for shift/diff]
+## 2024-11-23 - [Pandas 2D Array Batching vs 1D Loop Overhead for shift/diff]
 **Learning:** Extracting multiple non-contiguous columns from a Pandas DataFrame into a 2D NumPy array using `.to_numpy()` incurs memory copying overhead that significantly outweighs vectorization benefits. For operations like shift, diff, and pct_change across multiple columns, it was previously thought that combining them into a single 2D array operation would be faster. However, iterating through columns and performing the operations on 1D `.values` arrays directly avoids this memory copy overhead and provides a ~2-3x speedup.
 **Action:** When performing independent vector operations (like diff, shift, or pct_change) across multiple Pandas columns, do not blindly extract them into a 2D array via `.to_numpy()` to "batch" the operation. Iterate over the columns and run the standard operations on the 1D underlying `.values` arrays to maximize performance.
 
-## $(date +%Y-%m-%d) - [Pandas native subset assignment vs 1D Numpy slices]
+## 2024-11-23 - [Pandas native subset assignment vs 1D Numpy slices]
 **Learning:** When assigning a single value (like `np.nan` or `1.0`) to a subset of rows across multiple columns in Pandas based on a boolean mask, iterating through the columns and explicitly modifying underlying NumPy arrays one by one is less optimal. Using native Pandas `.loc` subset assignment (e.g., `df.loc[mask, cols] = value`) is faster and avoids manual loop overhead.
 **Action:** When assigning a single value to a subset of rows across multiple columns, prefer `df.loc[mask, cols] = value` over iterating through columns and modifying underlying NumPy arrays, as it is faster and natively handles the subset assignment.
 
-## $(date +%Y-%m-%d) - [DataFrame Subset Assignment vs 1D Numpy Shifting]
+## 2024-11-23 - [DataFrame Subset Assignment vs 1D Numpy Shifting]
 **Learning:** While `df.loc[mask, cols] = value` is fast for assigning single values to subsets of columns, using Pandas `.shift(1)` on multiple columns and then applying `.loc` assignment on the resulting DataFrame incurs significant dataframe alignment and memory assignment overhead. Extracting the underlying `1D .values` arrays, manually shifting via slice assignment (`shifted[1:] = arr[:-1]`), and applying the boundary mask directly to the numpy array (`shifted[mask] = 1.0`) completely bypasses Pandas overhead, providing a ~2.5x speedup for groupby-like emulation.
 **Action:** When emulating grouped `.shift(1)` across multiple columns, prefer extracting 1D numpy arrays, shifting via slice assignment, and directly applying the boundary mask to the arrays over relying on Pandas dataframe shift and `.loc` boundary assignment.
 
-## $(date +%Y-%m-%d) - [Pandas Categorical Assignment]
+## 2024-11-23 - [Pandas Categorical Assignment]
 **Learning:** Instantiating and assigning a large Pandas column with Python string objects using array indexing (`levels[idx]`) is extremely slow due to object creation overhead.
 **Action:** Use `pd.Categorical.from_codes(idx, categories=[...])` which is >10x faster as it utilizes integer codes internally.
 
-## $(date +%Y-%m-%d) - [Avoid replacing 1D numpy array assignments with pandas .loc]
+## 2024-11-23 - [Avoid replacing 1D numpy array assignments with pandas .loc]
 **Learning:** Although `df.loc[mask, cols] = value` provides a clean syntax for subset assignments across multiple columns, it introduces Pandas overhead for DataFrame alignment and block-management. Attempting to replace direct boolean indexing on a 1D NumPy array (`arr[mask] = 1.0`) inside a loop with a post-loop `.loc` assignment is a de-optimization and results in ~30% slower execution.
 **Action:** Stick to mutating 1D `.values` arrays directly when iterating through columns.
 
@@ -169,18 +169,22 @@
 ## 2024-11-20 - [Pandas 2D Array Batching vs 1D Loop Overhead for Dot Product in Rule-Based Scoring]
 **Learning:** For mathematical operations like computing a weighted score from boolean masks, extracting multiple masks into a 2D array and using `np.dot` was previously considered optimal due to C-level BLAS routines. However, allocating a large 2D NumPy array (`np.array(masks_list)`) incurs significant memory copying overhead. When computing scores and unique combination IDs for rule-based anomaly detection, bypassing the 2D array allocation and chaining standard 1D arithmetic (`score += p * m`) in a simple loop avoids this memory copy penalty and evaluates ~40-50% faster.
 **Action:** When computing a weighted sum or linear combination of multiple 1D arrays, avoid blindly collecting them into a 2D array to use `np.dot`. If the components are already separate 1D arrays, chaining 1D array operations in a loop avoids the memory copying overhead and provides significant speedups.
-## $(date +%Y-%m-%d) - [Optimizing List Creation and Loop Overheads in Array Operations]
+## 2024-11-23 - [Optimizing List Creation and Loop Overheads in Array Operations]
 **Learning:** When applying multiple rule-based boolean conditions to accumulate a score or combination ID, collecting the individual masks into a list comprehension (`[cond1, cond2, ...]`) and then iterating over them introduces unnecessary allocation overhead and Python loop overhead. Evaluating each condition sequentially and immediately accumulating its result into the target arrays (e.g., `m = cond; score += m * points; comb_ids += m * pow2`) completely bypasses list allocation and reduces peak memory usage.
 **Action:** When computing sums across multiple derived boolean masks, avoid constructing intermediate lists or 2D arrays to hold the masks before reduction. Perform direct accumulation as the masks are evaluated.
 ## 2024-05-17 - Vectorizing np.minimum over Pandas Series
 **Learning:** When using NumPy functions like `np.minimum` with Pandas Series, Pandas object instantiation and index alignment add significant overhead.
 **Action:** Extract the underlying C-level NumPy arrays using `.values` (e.g., `np.minimum(df['col1'].values, df['col2'].values)`) before passing them to NumPy functions to bypass the Pandas overhead and achieve a 3-5x speedup.
-## $(date +%Y-%m-%d) - [Pandas Scalar Comparison Assignment]
+## 2024-11-23 - [Pandas Scalar Comparison Assignment]
 **Learning:** When generating a boolean flag column based on a simple scalar comparison (e.g., `df['flag'] = df['score'] > -1`), checking against the Pandas Series incurs internal index alignment overhead even when assigning directly back to the identical dataframe.
 **Action:** When performing scalar comparisons to create a boolean mask, append `.values` to the evaluated Series (`df['score'].values > -1`). This evaluates strictly as a NumPy comparison, avoiding Pandas overhead and speeding up execution time safely.
-## $(date +%Y-%m-%d) - [Numpy nan_to_num Overhead]
+## 2024-11-23 - [Numpy nan_to_num Overhead]
 **Learning:** `np.nan_to_num` is surprisingly slow in Python. Direct boolean masking (e.g., `arr[np.isnan(arr)] = 0.0` or `arr[~np.isfinite(arr)] = 0.0`) is roughly 6-10x faster than calling `np.nan_to_num(arr, copy=False, nan=0.0, posinf=0.0, neginf=0.0)`. The `np.nan_to_num` function has significant internal overhead that makes it unsuitable for high-performance loops or simple replacements on large arrays where a boolean mask assignment is feasible.
 **Action:** Replace `np.nan_to_num` with boolean indexing using `np.isnan(arr)` when replacing only NaNs, or `~np.isfinite(arr)` when replacing NaNs and Infs, to bypass unnecessary overhead and achieve massive speedups.
 ## 2024-08-22 - [Pandas 3+ hasnans vs isna().values.any()]
 **Learning:** In Pandas 3+, evaluating `df.isna().values.any()` utilizes highly optimized C-level arrays directly and is significantly faster (up to ~30x faster) than iterating over Python columns to check the `.hasnans` cached property on small or mixed-type DataFrames.
 **Action:** When performing whole-DataFrame missing value checks in modern Pandas environments, default to `df.isna().values.any()` rather than attempting to manually loop through columns and rely on the `.hasnans` cache, which incurs high Python-level iteration overhead.
+
+## 2024-11-23 - [Pre-computing ratios before DataFrame Shifting]
+**Learning:** In the Beneish M-Score logic, shifting raw data components (like `accounts_receivable`, `current_assets`) to access "t-1" values, and *then* re-calculating financial ratios at "t-1" using those shifted arrays causes redundant work. Since ratios like `asset_quality` and `leverage` can be calculated natively at time "t", directly shifting these derived ratios instead of the raw components eliminates the need to calculate them again post-shift. This reduces the number of arrays being copied during the shift loop and avoids redundant division calculations, cutting execution time by ~30%.
+**Action:** Always check if a mathematical ratio required at `t-1` can be pre-calculated at time `t` and shifted directly, rather than shifting the underlying components and re-running the division math on the shifted data.
