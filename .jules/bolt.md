@@ -192,3 +192,7 @@
 ## 2024-11-23 - [Optimizing np.abs thresholding with direct boundary comparison]
 **Learning:** When generating a boolean mask based on whether an array's values exceed a certain magnitude (e.g., `np.abs(arr) > threshold`), calculating `np.abs(arr)` first allocates a new intermediate array and requires a full pass over the data. For simple thresholding, it is ~2x faster to directly evaluate the positive and negative boundaries `(arr > threshold) | (arr < -threshold)` because it completely avoids the memory allocation and copying overhead of creating the absolute value array.
 **Action:** When comparing the absolute value of a NumPy array against a threshold to create a boolean mask, replace `np.abs(arr) > threshold` with the explicit dual condition `(arr > threshold) | (arr < -threshold)` to bypass intermediate array allocation overhead.
+
+## 2026-09-22 - [IsolationForest Scale Invariance]
+**Learning:** Tree-based models like `IsolationForest` are invariant to monotonic transformations. Using `StandardScaler` before fitting them adds overhead (`fit_transform` time and allocation of a new array) but does not change the resulting splits or predictions.
+**Action:** Avoid applying `StandardScaler` (or other monotonic scalers) before using tree-based ensemble models like `IsolationForest` to save memory and execution time.
