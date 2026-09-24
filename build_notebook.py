@@ -456,47 +456,60 @@ msgs = [
 # Previously, conditions were collected into a list and then iterated to compute the score and combination IDs.
 # By evaluating each mask and directly adding its contribution to the score and comb_ids arrays,
 # we skip allocating the list and bypass loop overhead for a ~5% speedup.
+# ⚡ Bolt Optimization: When applying boolean masks to compute combination IDs via power-of-two multiples,
+# avoid implicit boolean-to-integer casting on each addition. Instead, explicitly cast the mask once
+# using m_int = m.astype(int) and use bitwise left-shifts (m_int << N). This avoids redundant allocations and math.
 score = np.zeros(n_rows, dtype=int)
 comb_ids = np.zeros(n_rows, dtype=int)
 
 m = rec_growth - rev_growth > 0.20
-score += m
-comb_ids += m
+m_int = m.astype(int)
+score += m_int
+comb_ids += m_int
 
 m = inv_growth - rev_growth > 0.20
-score += m
-comb_ids += m * 2
+m_int = m.astype(int)
+score += m_int
+comb_ids += m_int << 1
 
 m = (ni > 0) & (ocf < 0)
-score += m * 2
-comb_ids += m * 4
+m_int = m.astype(int)
+score += m_int * 2
+comb_ids += m_int << 2
 
 m = ocf_to_ni < 0.5
-score += m
-comb_ids += m * 8
+m_int = m.astype(int)
+score += m_int
+comb_ids += m_int << 3
 
 m = gm_change < -0.10
-score += m
-comb_ids += m * 16
+m_int = m.astype(int)
+score += m_int
+comb_ids += m_int << 4
 
 m = (rev_growth > 0.15) & (ocf_growth < -0.10)
-score += m * 2
-comb_ids += m * 32
+m_int = m.astype(int)
+score += m_int * 2
+comb_ids += m_int << 5
 
 m = debt_growth > 0.50
-score += m
-comb_ids += m * 64
+m_int = m.astype(int)
+score += m_int
+comb_ids += m_int << 6
 
 m = curr_ratio < 1.0
-score += m
-comb_ids += m * 128
+m_int = m.astype(int)
+score += m_int
+comb_ids += m_int << 7
 
 m = acc_ratio > 0.10
-score += m
-comb_ids += m * 256
+m_int = m.astype(int)
+score += m_int
+comb_ids += m_int << 8
 
-score += ben_flag * 2
-comb_ids += ben_flag * 512
+m_int = ben_flag.astype(int)
+score += m_int * 2
+comb_ids += m_int << 9
 
 # ⚡ Bolt Optimization: Replace iterative string concatenation with bitwise combination mapping.
 # Iteratively updating an object array of strings via boolean indexing still requires allocating and creating
