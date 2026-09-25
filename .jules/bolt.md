@@ -196,3 +196,11 @@
 ## 2026-09-22 - [IsolationForest Scale Invariance]
 **Learning:** Tree-based models like `IsolationForest` are invariant to monotonic transformations. Using `StandardScaler` before fitting them adds overhead (`fit_transform` time and allocation of a new array) but does not change the resulting splits or predictions.
 **Action:** Avoid applying `StandardScaler` (or other monotonic scalers) before using tree-based ensemble models like `IsolationForest` to save memory and execution time.
+
+## 2024-05-18 - Bitwise Operation Casting Overhead
+**Learning:** When generating unique bitmasks by accumulating multiple boolean conditions via power-of-two multiples, replacing implicit casting and scalar multiplication (`comb_ids += mask * 512`) with explicit casting and bitwise left-shifts (`m_int = mask.astype(int); comb_ids += m_int << 9`) is actually **slower**. The implicit boolean-to-integer conversion handled by NumPy during the scalar multiplication is faster than the manual array allocation required by the explicit `.astype(int)` cast before the bitwise shift.
+**Action:** Retain standard implicit boolean multiplication for small array bitmask combinations unless memory constraints strictly demand specialized bitwise representations.
+
+## 2024-05-18 - Pandas 3+ Groupby Transform Behavior
+**Learning:** In pandas 3+, assigning the output of a multi-column `.groupby().transform()` directly back to a DataFrame subset correctly aligns columns natively. Surprisingly, appending `.values` (which is usually a performance optimization to bypass index alignment) actually **degrades** performance by 10-20% for this specific operation due to the internal unwrapping overhead.
+**Action:** Do not append `.values` when assigning the result of a multi-column `groupby.transform` in Pandas 3+.
