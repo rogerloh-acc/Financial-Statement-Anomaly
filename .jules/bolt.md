@@ -204,3 +204,6 @@
 ## 2024-05-18 - Pandas 3+ Groupby Transform Behavior
 **Learning:** In pandas 3+, assigning the output of a multi-column `.groupby().transform()` directly back to a DataFrame subset correctly aligns columns natively. Surprisingly, appending `.values` (which is usually a performance optimization to bypass index alignment) actually **degrades** performance by 10-20% for this specific operation due to the internal unwrapping overhead.
 **Action:** Do not append `.values` when assigning the result of a multi-column `groupby.transform` in Pandas 3+.
+## 2026-09-25 - [Numpy boolean masking and implicit casting]
+**Learning:** When applying boolean masks to compute combination IDs via power-of-two multiples, rely on numpy's implicit boolean-to-integer casting during multiplication (e.g., `comb_ids += m * 512`). Explicitly casting the boolean mask using `m.astype(int)` and bitwise shifts creates unnecessary intermediate arrays and is measurably slower than implicit casting during arithmetic.
+**Action:** Use implicit boolean-to-integer casting during array arithmetic instead of explicit `astype(int)` when applying boolean masks.

@@ -457,59 +457,50 @@ msgs = [
 # By evaluating each mask and directly adding its contribution to the score and comb_ids arrays,
 # we skip allocating the list and bypass loop overhead for a ~5% speedup.
 # ⚡ Bolt Optimization: When applying boolean masks to compute combination IDs via power-of-two multiples,
-# avoid implicit boolean-to-integer casting on each addition. Instead, explicitly cast the mask once
-# using m_int = m.astype(int) and use bitwise left-shifts (m_int << N). This avoids redundant allocations and math.
+# rely on numpy's implicit boolean-to-integer casting during multiplication (e.g., comb_ids += m * 512).
+# Do NOT explicitly cast the boolean mask using m.astype(int) and bitwise shifts, as the array allocation
+# overhead of astype() is measurably slower than implicit casting.
 score = np.zeros(n_rows, dtype=int)
 comb_ids = np.zeros(n_rows, dtype=int)
 
 m = rec_growth - rev_growth > 0.20
-m_int = m.astype(int)
-score += m_int
-comb_ids += m_int
+score += m
+comb_ids += m
 
 m = inv_growth - rev_growth > 0.20
-m_int = m.astype(int)
-score += m_int
-comb_ids += m_int << 1
+score += m
+comb_ids += m * 2
 
 m = (ni > 0) & (ocf < 0)
-m_int = m.astype(int)
-score += m_int * 2
-comb_ids += m_int << 2
+score += m * 2
+comb_ids += m * 4
 
 m = ocf_to_ni < 0.5
-m_int = m.astype(int)
-score += m_int
-comb_ids += m_int << 3
+score += m
+comb_ids += m * 8
 
 m = gm_change < -0.10
-m_int = m.astype(int)
-score += m_int
-comb_ids += m_int << 4
+score += m
+comb_ids += m * 16
 
 m = (rev_growth > 0.15) & (ocf_growth < -0.10)
-m_int = m.astype(int)
-score += m_int * 2
-comb_ids += m_int << 5
+score += m * 2
+comb_ids += m * 32
 
 m = debt_growth > 0.50
-m_int = m.astype(int)
-score += m_int
-comb_ids += m_int << 6
+score += m
+comb_ids += m * 64
 
 m = curr_ratio < 1.0
-m_int = m.astype(int)
-score += m_int
-comb_ids += m_int << 7
+score += m
+comb_ids += m * 128
 
 m = acc_ratio > 0.10
-m_int = m.astype(int)
-score += m_int
-comb_ids += m_int << 8
+score += m
+comb_ids += m * 256
 
-m_int = ben_flag.astype(int)
-score += m_int * 2
-comb_ids += m_int << 9
+score += ben_flag * 2
+comb_ids += ben_flag * 512
 
 # ⚡ Bolt Optimization: Replace iterative string concatenation with bitwise combination mapping.
 # Iteratively updating an object array of strings via boolean indexing still requires allocating and creating
