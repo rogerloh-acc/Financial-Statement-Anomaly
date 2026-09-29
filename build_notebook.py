@@ -270,11 +270,10 @@ for g_col, new_g_col in zip(growth_cols, new_growth_cols):
     with np.errstate(divide='ignore', invalid='ignore'):
         # ⚡ Bolt Optimization: Replace separate subtract and divide operations with a single division and subtract 1.
         # Mathematically, (New - Old) / Old is equivalent to (New / Old) - 1.
-        # Combine this with pre-allocated memory slices using np.divide(..., out=slice)
-        # and np.subtract(slice, 1.0, out=slice) to avoid allocating intermediate arrays
-        # and to reduce array reads, providing a significant speedup over standard slice assignment.
-        np.divide(arr[1:], arr[:-1], out=pct[1:])
-        np.subtract(pct[1:], 1.0, out=pct[1:])
+        # Note: Do not use np.divide(..., out=pct[1:]) and np.subtract(..., out=pct[1:]) when allocating
+        # a new array. Using standard arithmetic operators optimally allocates a single new array at the C level.
+        # The out= parameter only provides a benefit if the pre-allocated array buffer is reused repeatedly.
+        pct[1:] = (arr[1:] / arr[:-1]) - 1.0
 
     # ⚡ Bolt Optimization: Apply missing value boundaries directly on the array instead of doing a full pass
     # with df.loc and then .fillna on the resulting dataframe. By masking group boundary crossings directly
@@ -297,9 +296,9 @@ for m_col, new_m_col in zip(margin_cols, new_margin_cols):
     diff = np.empty_like(arr, dtype=float)
     diff[0] = 0.0
     # ⚡ Bolt Optimization: While standard arithmetic operators (A - B) are optimal for full arrays,
-    # they introduce overhead when assigning to slices by evaluating and creating a temporary array.
-    # Use np.subtract(A, B, out=slice) to write directly to the pre-allocated slice and avoid the allocation.
-    np.subtract(arr[1:], arr[:-1], out=diff[1:])
+    # using np.subtract(A, B, out=slice) with a newly allocated array actually introduces overhead.
+    # Using standard arithmetic operators optimally allocates a single new array at the C level.
+    diff[1:] = arr[1:] - arr[:-1]
     diff[mask] = 0.0
     # ⚡ Bolt Optimization: Use np.isnan for direct array masking instead of np.nan_to_num, which incurs overhead. (~10x faster)
     diff[np.isnan(diff)] = 0.0
